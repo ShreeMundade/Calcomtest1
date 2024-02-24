@@ -1,0 +1,98 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  bids                     Bid[]
+  bio                      String?
+  createdAt                DateTime      @default(now())
+  email                    String        @unique
+  id                       Int           @id @default(autoincrement())
+  jobs                     Job[]
+  location                 String?
+  password                 String
+  profileImage             String?
+  receivedMessages         Message[]     @relation(name: "receivedMessages")
+  reviewsAsClient          Review[]      @relation(name: "reviewsAsClient")
+  reviewsAsFreelancer      Review[]      @relation(name: "reviewsAsFreelancer")
+  role                     EnumUserRole
+  sentMessages             Message[]     @relation(name: "sender")
+  transactionsAsClient     Transaction[] @relation(name: "transactionsAsClient")
+  transactionsAsFreelancer Transaction[] @relation(name: "transactionsAsFreelancer")
+  username                 String        @unique
+}
+
+model Skill {
+  description String?
+  id          Int     @id @default(autoincrement())
+  name        String
+}
+
+model Job {
+  bids         Bid[]
+  budget       Float
+  client       User          @relation(fields: [clientId], references: [id])
+  clientId     Int
+  createdAt    DateTime      @default(now())
+  description  String
+  id           Int           @id @default(autoincrement())
+  reviews      Review[]
+  title        String
+  transactions Transaction[]
+}
+
+model Bid {
+  amount       Float
+  createdAt    DateTime @default(now())
+  freelancer   User     @relation(fields: [freelancerId], references: [id])
+  freelancerId Int
+  id           Int      @id @default(autoincrement())
+  job          Job      @relation(fields: [jobId], references: [id])
+  jobId        Int
+  proposal     String
+}
+
+model Message {
+  content    String
+  id         Int      @id @default(autoincrement())
+  receiver   User     @relation(name: "receivedMessages", fields: [receiverId], references: [id])
+  receiverId Int
+  sender     User     @relation(name: "sender", fields: [senderId], references: [id])
+  senderId   Int
+  sentAt     DateTime @default(now())
+}
+
+model Review {
+  client       User     @relation(name: "reviewsAsClient", fields: [clientId], references: [id])
+  clientId     Int
+  content      String
+  createdAt    DateTime @default(now())
+  freelancer   User     @relation(name: "reviewsAsFreelancer", fields: [freelancerId], references: [id])
+  freelancerId Int
+  id           Int      @id @default(autoincrement())
+  job          Job      @relation(fields: [jobId], references: [id])
+  jobId        Int
+  rating       Int
+}
+
+model Transaction {
+  amount          Float
+  client          User     @relation(name: "transactionsAsClient", fields: [clientId], references: [id])
+  clientId        Int
+  freelancer      User     @relation(name: "transactionsAsFreelancer", fields: [freelancerId], references: [id])
+  freelancerId    Int
+  id              Int      @id @default(autoincrement())
+  job             Job      @relation(fields: [jobId], references: [id])
+  jobId           Int
+  transactionDate DateTime @default(now())
+}
+
+enum EnumUserRole {
+  CLIENT
+  FREELANCER
+}
