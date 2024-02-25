@@ -1,0 +1,1013 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Host {
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  eventTypeId Int
+  id          Int       @id @default(autoincrement())
+  isFixed     Boolean   @default(false)
+  priority    Int?
+  user        User      @relation(fields: [userId], references: [id])
+  userId      Int
+
+  @@index([userId])
+  @@index([eventTypeId])
+}
+
+model EventType {
+  afterEventBuffer                     Int                          @default(0)
+  assignAllTeamMembers                 Boolean                      @default(false)
+  availability                         Availability[]
+  beforeEventBuffer                    Int                          @default(0)
+  bookingFields                        Json?
+  bookingLimits                        Json?
+  bookings                             Booking[]
+  children                             EventType[]                  @relation(name: "EventTypeChildrenEventTypeParent")
+  currency                             String                       @default("usd")
+  customInputs                         EventTypeCustomInput[]
+  description                          String?
+  destinationCalendar                  DestinationCalendar?
+  disableGuests                        Boolean                      @default(false)
+  durationLimits                       Json?
+  eventName                            String?
+  hashedLink                           HashedLink?
+  hidden                               Boolean                      @default(false)
+  hideCalendarNotes                    Boolean                      @default(false)
+  hosts                                Host[]
+  id                                   Int                          @id @default(autoincrement())
+  isInstantEvent                       Boolean                      @default(false)
+  length                               Int
+  locations                            Json?
+  lockTimeZoneToggleOnBookingPage      Boolean                      @default(false)
+  metadata                             Json?
+  minimumBookingNotice                 Int                          @default(120)
+  offsetStart                          Int                          @default(0)
+  onlyShowFirstAvailableSlot           Boolean                      @default(false)
+  owner                                User?                        @relation(fields: [userId], references: [id])
+  userId                               Int?
+  parent                               EventType?                   @relation(name: "EventTypeChildrenEventTypeParent", fields: [parentId], references: [id])
+  parentId                             Int?
+  periodCountCalendarDays              Boolean?
+  periodDays                           Int?
+  periodEndDate                        DateTime?
+  periodStartDate                      DateTime?
+  periodType                           EnumEventTypePeriodType      @default(UNLIMITED)
+  position                             Int                          @default(0)
+  price                                Int                          @default(0)
+  profile                              Profile?                     @relation(fields: [profileId], references: [id])
+  profileId                            Int?
+  recurringEvent                       Json?
+  requiresBookerEmailVerification      Boolean                      @default(false)
+  requiresConfirmation                 Boolean                      @default(false)
+  schedule                             Schedule?                    @relation(fields: [scheduleId], references: [id])
+  scheduleId                           Int?
+  schedulingType                       EnumEventTypeSchedulingType?
+  seatsPerTimeSlot                     Int?
+  seatsShowAttendees                   Boolean?                     @default(false)
+  seatsShowAvailabilityCount           Boolean?                     @default(true)
+  slotInterval                         Int?
+  slug                                 String
+  successRedirectUrl                   String?
+  team                                 Team?                        @relation(fields: [teamId], references: [id])
+  teamId                               Int?
+  timeZone                             String?
+  title                                String
+  useEventTypeDestinationCalendarEmail Boolean                      @default(false)
+  webhooks                             Webhook[]
+  workflows                            WorkflowsOnEventType[]
+
+  @@unique([userId, slug])
+  @@unique([teamId, slug])
+  @@unique([userId, parentId])
+  @@index([userId])
+  @@index([teamId])
+  @@index([scheduleId])
+}
+
+model Credential {
+  appField             AppModel?             @relation(fields: [appId], references: [id])
+  appId                String?
+  billingCycleStart    Int?
+  calendarCache        CalendarCache[]
+  destinationCalendars DestinationCalendar[]
+  id                   Int                   @id @default(autoincrement())
+  invalid              Boolean?              @default(false)
+  key                  Json
+  paymentStatus        String?
+  selectedCalendars    SelectedCalendar[]
+  subscriptionId       String?
+  team                 Team?                 @relation(fields: [teamId], references: [id])
+  teamId               Int?
+  typeField            String                @map("type")
+  user                 User?                 @relation(fields: [userId], references: [id])
+  userId               Int?
+
+  @@index([userId])
+  @@index([appId])
+  @@index([subscriptionId])
+}
+
+model DestinationCalendar {
+  booking      Booking[]
+  credential   Credential? @relation(fields: [credentialId], references: [id])
+  credentialId Int?
+  eventType    EventType?  @relation(fields: [eventTypeId], references: [id])
+  eventTypeId  Int?        @unique
+  externalId   String
+  id           Int         @id @default(autoincrement())
+  integration  String
+  primaryEmail String?
+  user         User?       @relation(fields: [userId], references: [id])
+  userId       Int?        @unique
+
+  @@index([userId])
+  @@index([eventTypeId])
+  @@index([credentialId])
+}
+
+model UserPassword {
+  hash   String
+  id     Int    @id @unique @default(autoincrement()) @map("userId")
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int    @unique
+}
+
+model User {
+  accessCodes               AccessCode[]
+  accounts                  Account[]
+  allowDynamicBooking       Boolean?                 @default(true)
+  allowSEOIndexing          Boolean?                 @default(true)
+  apiKeys                   ApiKey[]
+  appTheme                  String?
+  availability              Availability[]
+  avatar                    String?
+  avatarUrl                 String?
+  away                      Boolean                  @default(false)
+  backupCodes               String?
+  bio                       String?
+  bookingRedirects          OutOfOfficeEntry[]       @relation(name: "bookingRedirects")
+  bookingRedirectsTo        OutOfOfficeEntry[]       @relation(name: "bookingRedirectsTo")
+  bookings                  Booking[]
+  brandColor                String?
+  bufferTime                Int                      @default(0)
+  completedOnboarding       Boolean                  @default(false)
+  createdDate               DateTime                 @default(now()) @map(name: "created")
+  credentials               Credential[]
+  darkBrandColor            String?
+  defaultScheduleId         Int?
+  destinationCalendar       DestinationCalendar?
+  disableImpersonation      Boolean                  @default(false)
+  email                     String
+  emailVerified             DateTime?
+  endTime                   Int                      @default(1440)
+  feedback                  Feedback[]
+  hideBranding              Boolean                  @default(false)
+  hosts                     Host[]
+  id                        Int                      @id @default(autoincrement())
+  identityProvider          EnumUserIdentityProvider @default(CAL)
+  identityProviderId        String?
+  impersonatedBy            Impersonation[]          @relation(name: "ImpersonationImpersonatedByUserImpersonatedBy")
+  impersonatedUsers         Impersonation[]          @relation(name: "impersonatedUser")
+  invitedTo                 Int?
+  locale                    String?
+  locked                    Boolean                  @default(false)
+  metadata                  Json?
+  movedToProfile            Profile?                 @relation(name: "movedFromUser", fields: [movedToProfileId], references: [id])
+  movedToProfileId          Int?                     @unique
+  name                      String?
+  organization              Team?                    @relation(fields: [organizationId], references: [id])
+  organizationId            Int?
+  ownedEventTypes           EventType[]
+  password                  UserPassword?
+  profiles                  Profile[]                @relation(name: "ProfilesOnUser")
+  receiveMonthlyDigestEmail Boolean?                 @default(true)
+  role                      EnumUserRole             @default(USER)
+  routingForms              AppRoutingFormsForm[]
+  schedules                 Schedule[]
+  selectedCalendars         SelectedCalendar[]
+  sessions                  Session[]
+  startTime                 Int                      @default(0)
+  teams                     Membership[]
+  theme                     String?
+  timeFormat                Int?                     @default(12)
+  timeZone                  String                   @default("Europe/London")
+  trialEndsAt               DateTime?
+  twoFactorEnabled          Boolean                  @default(false)
+  twoFactorSecret           String?
+  username                  String?
+  verified                  Boolean?                 @default(false)
+  verifiedNumbers           VerifiedNumber[]
+  webhooks                  Webhook[]
+  weekStart                 String                   @default("Sunday")
+  workflows                 Workflow[]
+
+  @@unique([email])
+  @@unique([email, username])
+  @@unique([username, organizationId])
+  @@unique([movedToProfileId])
+  @@index([username])
+  @@index([emailVerified])
+  @@index([identityProvider])
+  @@index([identityProviderId])
+  @@map(name: "users")
+}
+
+model Profile {
+  createdAt      DateTime    @default(now())
+  eventTypes     EventType[]
+  id             Int         @id @default(autoincrement())
+  movedFromUser  User?       @relation(name: "movedFromUser")
+  organization   Team        @relation(fields: [organizationId], references: [id])
+  organizationId Int
+  uid            String
+  updatedAt      DateTime    @updatedAt
+  user           User        @relation(name: "ProfilesOnUser", fields: [userId], references: [id])
+  userId         Int
+  username       String
+
+  @@unique([userId, organizationId])
+  @@index([uid])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Team {
+  accessCodes          AccessCode[]
+  apiKeys              ApiKey[]
+  appIconLogo          String?
+  appLogo              String?
+  bio                  String?
+  brandColor           String?
+  calVideoLogo         String?
+  children             Team[]                @relation(name: "TeamChildrenTeamParent")
+  createdAt            DateTime              @default(now())
+  credentials          Credential[]
+  darkBrandColor       String?
+  eventTypes           EventType[]
+  hideBookATeamMember  Boolean               @default(false)
+  hideBranding         Boolean               @default(false)
+  id                   Int                   @id @default(autoincrement())
+  instantMeetingTokens InstantMeetingToken[]
+  inviteTokens         VerificationToken[]
+  isPrivate            Boolean               @default(false)
+  logo                 String?
+  logoUrl              String?
+  members              Membership[]
+  metadata             Json?
+  name                 String
+  orgProfiles          Profile[]
+  orgUsers             User[]
+  parent               Team?                 @relation(name: "TeamChildrenTeamParent", fields: [parentId], references: [id])
+  parentId             Int?
+  pendingPayment       Boolean               @default(false)
+  routingForms         AppRoutingFormsForm[]
+  slug                 String?
+  theme                String?
+  timeFormat           Int?
+  timeZone             String                @default("Europe/London")
+  verifiedNumbers      VerifiedNumber[]
+  webhooks             Webhook[]
+  weekStart            String                @default("Sunday")
+  workflows            Workflow[]
+
+  @@unique([slug, parentId])
+}
+
+model Membership {
+  accepted             Boolean            @default(false)
+  disableImpersonation Boolean            @default(false)
+  id                   Int                @id @default(autoincrement())
+  role                 EnumMembershipRole
+  team                 Team               @relation(fields: [teamId], references: [id])
+  teamId               Int
+  user                 User               @relation(fields: [userId], references: [id])
+  userId               Int
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model VerificationToken {
+  createdAt     DateTime @default(now())
+  expires       DateTime
+  expiresInDays Int?
+  id            Int      @id @default(autoincrement())
+  identifier    String
+  team          Team?    @relation(fields: [teamId], references: [id])
+  teamId        Int?
+  token         String   @unique
+  updatedAt     DateTime @updatedAt
+
+  @@unique([identifier, token])
+  @@index([token])
+  @@index([teamId])
+}
+
+model InstantMeetingToken {
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  bookingId Int?     @unique
+  createdAt DateTime @default(now())
+  expires   DateTime
+  id        Int      @id @default(autoincrement())
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    Int
+  token     String   @unique
+  updatedAt DateTime @updatedAt
+
+  @@index([token])
+}
+
+model BookingReference {
+  booking                    Booking? @relation(fields: [bookingId], references: [id])
+  bookingId                  Int?
+  credentialId               Int?
+  deleted                    Boolean?
+  externalCalendarId         String?
+  id                         Int      @id @default(autoincrement())
+  meetingId                  String?
+  meetingPassword            String?
+  meetingUrl                 String?
+  thirdPartyRecurringEventId String?
+  typeField                  String   @map("type")
+  uid                        String
+
+  @@index([bookingId])
+  @@index([credentialId])
+  @@index([typeField])
+  @@index([uid])
+}
+
+model Attendee {
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
+  bookingId   Int?
+  bookingSeat BookingSeat?
+  email       String
+  id          Int          @id @default(autoincrement())
+  locale      String?      @default("en")
+  name        String
+  timeZone    String
+
+  @@index([email])
+  @@index([bookingId])
+}
+
+model Booking {
+  attendees             Attendee[]
+  cancellationReason    String?
+  createdAt             DateTime             @default(now())
+  customInputs          Json?
+  description           String?
+  destinationCalendar   DestinationCalendar? @relation(fields: [destinationCalendarId], references: [id])
+  destinationCalendarId Int?
+  dynamicEventSlugRef   String?
+  dynamicGroupSlugRef   String?
+  endTime               DateTime
+  eventType             EventType?           @relation(fields: [eventTypeId], references: [id])
+  eventTypeId           Int?
+  fromReschedule        String?
+  iCalSequence          Int                  @default(0)
+  iCalUID               String?              @default("")
+  id                    Int                  @id @default(autoincrement())
+  instantMeetingToken   InstantMeetingToken?
+  isRecorded            Boolean              @default(false)
+  location              String?
+  metadata              Json?
+  paid                  Boolean              @default(false)
+  payment               Payment[]
+  recurringEventId      String?
+  references            BookingReference[]
+  rejectionReason       String?
+  rescheduled           Boolean?
+  responses             Json?
+  scheduledJobs         String
+  seatsReferences       BookingSeat[]
+  smsReminderNumber     String?
+  startTime             DateTime
+  status                EnumBookingStatus    @default(ACCEPTED)
+  title                 String
+  uid                   String               @unique
+  updatedAt             DateTime?
+  user                  User?                @relation(fields: [userId], references: [id])
+  userId                Int?
+  userPrimaryEmail      String?
+  workflowReminders     WorkflowReminder[]
+
+  @@index([eventTypeId])
+  @@index([userId])
+  @@index([destinationCalendarId])
+  @@index([recurringEventId])
+  @@index([uid])
+  @@index([status])
+  @@index([startTime, endTime, status])
+}
+
+model Schedule {
+  availability Availability[]
+  eventType    EventType[]
+  id           Int            @id @default(autoincrement())
+  name         String
+  timeZone     String?
+  user         User           @relation(fields: [userId], references: [id])
+  userId       Int
+
+  @@index([userId])
+}
+
+model Availability {
+  date        DateTime?  @db.Date
+  days        Int
+  endTime     DateTime   @db.Time
+  eventType   EventType? @relation(fields: [eventTypeId], references: [id])
+  eventTypeId Int?
+  id          Int        @id @default(autoincrement())
+  schedule    Schedule?  @relation(fields: [scheduleId], references: [id])
+  scheduleId  Int?
+  startTime   DateTime   @db.Time
+  user        User?      @relation(fields: [userId], references: [id])
+  userId      Int?
+
+  @@index([userId])
+  @@index([eventTypeId])
+  @@index([scheduleId])
+}
+
+model SelectedCalendar {
+  credential   Credential? @relation(fields: [credentialId], references: [id])
+  credentialId Int?
+  externalId   String
+  id           Int         @id @default(autoincrement())
+  integration  String
+  user         User        @relation(fields: [userId], references: [id])
+  userId       Int
+
+  @@index([userId])
+  @@index([integration])
+  @@index([externalId])
+}
+
+model EventTypeCustomInput {
+  eventType   EventType                    @relation(fields: [eventTypeId], references: [id])
+  eventTypeId Int
+  id          Int                          @id @default(autoincrement())
+  label       String
+  options     Json?
+  placeholder String                       @default("")
+  required    Boolean
+  type        EnumEventTypeCustomInputType
+
+  @@index([eventTypeId])
+}
+
+model ResetPasswordRequest {
+  createdAt DateTime @default(now())
+  email     String
+  expires   DateTime
+  id        String   @id @default(cuid())
+  updatedAt DateTime @updatedAt
+}
+
+model ReminderMail {
+  createdAt      DateTime                     @default(now())
+  elapsedMinutes Int
+  id             Int                          @id @default(autoincrement())
+  referenceId    Int
+  reminderType   EnumReminderMailReminderType
+
+  @@index([referenceId])
+  @@index([reminderType])
+}
+
+model Payment {
+  amount        Int
+  appField      AppModel?                 @relation(fields: [appId], references: [id])
+  appId         String?
+  booking       Booking?                  @relation(fields: [bookingId], references: [id])
+  bookingId     Int?
+  currency      String
+  data          Json
+  externalId    String                    @unique
+  fee           Int
+  id            Int                       @id @default(autoincrement())
+  paymentOption EnumPaymentPaymentOption? @default(ON_BOOKING)
+  refunded      Boolean
+  success       Boolean
+  uid           String                    @unique
+
+  @@index([bookingId])
+  @@index([externalId])
+}
+
+model Webhook {
+  active          Boolean                    @default(true)
+  appField        AppModel?                  @relation(fields: [appId], references: [id])
+  appId           String?
+  createdAt       DateTime                   @default(now())
+  eventTriggers   EnumWebhookEventTriggers[]
+  eventType       EventType?                 @relation(fields: [eventTypeId], references: [id])
+  eventTypeId     Int?
+  id              String                     @id @unique @default(cuid())
+  payloadTemplate String?
+  secret          String?
+  subscriberUrl   String
+  team            Team?                      @relation(fields: [teamId], references: [id])
+  teamId          Int?
+  user            User?                      @relation(fields: [userId], references: [id])
+  userId          Int?
+
+  @@unique([userId, subscriberUrl], name: "courseIdentifier")
+}
+
+model Impersonation {
+  createdAt          DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  impersonatedBy     User     @relation(name: "ImpersonationImpersonatedByUserImpersonatedBy", fields: [impersonatedById], references: [id])
+  impersonatedById   Int
+  impersonatedUser   User     @relation(name: "impersonatedUser", fields: [impersonatedUserId], references: [id])
+  impersonatedUserId Int
+
+  @@map("Impersonations")
+}
+
+model ApiKey {
+  appField   AppModel? @relation(fields: [appId], references: [id])
+  appId      String?
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  hashedKey  String    @unique
+  id         String    @id @unique @default(cuid())
+  lastUsedAt DateTime?
+  note       String?
+  team       Team?     @relation(fields: [teamId], references: [id])
+  teamId     Int?
+  user       User?     @relation(fields: [userId], references: [id])
+  userId     Int?
+
+  @@index([userId])
+}
+
+model HashedLink {
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  eventTypeId Int       @unique
+  id          Int       @id @default(autoincrement())
+  link        String    @unique
+}
+
+model Account {
+  accessToken       String? @map("access_token") @db.Text
+  expiresAt         Int?    @map("expires_at")
+  id                String  @id @default(cuid())
+  idToken           String? @map("id_token") @db.Text
+  provider          String
+  providerAccountId String
+  refreshToken      String? @map("refresh_token") @db.Text
+  scope             String?
+  sessionState      String? @map("session_state")
+  tokenType         String? @map("token_type")
+  typeField         String  @map("type")
+  user              User?   @relation(fields: [userId], references: [id])
+  userId            Int?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([typeField])
+}
+
+model Session {
+  expires      DateTime
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  user         User?    @relation(fields: [userId], references: [id])
+  userId       Int?
+
+  @@index([userId])
+}
+
+model AppModel {
+  apiKey      ApiKey[]
+  categories  EnumAppModelCategories[]
+  createdAt   DateTime                 @default(now())
+  credentials Credential[]
+  dirName     String                   @unique
+  enabled     Boolean                  @default(false)
+  id          String                   @id @unique @default(cuid()) @map("slug")
+  keys        Json?
+  payments    Payment[]
+  updatedAt   DateTime                 @updatedAt
+  webhook     Webhook[]
+
+  @@index([enabled])
+  @@map("App")
+}
+
+model AppRoutingFormsForm {
+  createdAt   DateTime                      @default(now())
+  description String?
+  disabled    Boolean                       @default(false)
+  fields      Json?
+  id          String                        @id @default(cuid())
+  name        String
+  position    Int                           @default(0)
+  responses   AppRoutingFormsFormResponse[]
+  routes      Json?
+  settings    Json?
+  team        Team?                         @relation(fields: [teamId], references: [id])
+  teamId      Int?
+  updatedAt   DateTime                      @updatedAt
+  user        User                          @relation(fields: [userId], references: [id])
+  userId      Int
+
+  @@index([userId])
+  @@index([disabled])
+  @@map("App_RoutingForms_Form")
+}
+
+model AppRoutingFormsFormResponse {
+  createdAt    DateTime            @default(now())
+  form         AppRoutingFormsForm @relation(fields: [formId], references: [id])
+  formId       String
+  formFillerId String              @default(cuid())
+  id           Int                 @id @default(autoincrement())
+  response     Json
+
+  @@unique([formFillerId, formId])
+  @@index([formFillerId])
+  @@index([formId])
+  @@map("App_RoutingForms_FormResponse")
+}
+
+model Feedback {
+  comment String?
+  date    DateTime @default(now())
+  id      Int      @id @default(autoincrement())
+  rating  String
+  user    User     @relation(fields: [userId], references: [id])
+  userId  Int
+
+  @@index([userId])
+  @@index([rating])
+}
+
+model WorkflowStep {
+  action                    EnumWorkflowStepAction
+  emailSubject              String?
+  id                        Int                      @id @default(autoincrement())
+  includeCalendarEvent      Boolean                  @default(false)
+  numberRequired            Boolean?
+  numberVerificationPending Boolean                  @default(true)
+  reminderBody              String?
+  sender                    String?
+  sendTo                    String?
+  stepNumber                Int
+  template                  EnumWorkflowStepTemplate @default(REMINDER)
+  workflow                  Workflow                 @relation(fields: [workflowId], references: [id])
+  workflowId                Int
+  workflowReminders         WorkflowReminder[]
+
+  @@index([workflowId])
+}
+
+model Workflow {
+  activeOn WorkflowsOnEventType[]
+  id       Int                    @id @default(autoincrement())
+  name     String
+  position Int                    @default(0)
+  steps    WorkflowStep[]
+  team     Team?                  @relation(fields: [teamId], references: [id])
+  teamId   Int?
+  time     Int?
+  timeUnit EnumWorkflowTimeUnit?
+  trigger  EnumWorkflowTrigger
+  user     User?                  @relation(fields: [userId], references: [id])
+  userId   Int?
+
+  @@index([userId])
+  @@index([teamId])
+}
+
+model WorkflowsOnEventType {
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  eventTypeId Int
+  id          Int       @id @default(autoincrement())
+  workflow    Workflow  @relation(fields: [workflowId], references: [id])
+  workflowId  Int
+
+  @@unique([workflowId, eventTypeId])
+  @@index([workflowId])
+  @@index([eventTypeId])
+  @@map("WorkflowsOnEventTypes")
+}
+
+model Deployment {
+  agreedLicenseAt DateTime?
+  id              Int       @id @default(autoincrement())
+  licenseKey      String?
+  logo            String?
+  theme           Json?
+}
+
+model WorkflowReminder {
+  booking             Booking?                   @relation(fields: [bookingUid], references: [id])
+  bookingUid          Int?
+  cancelled           Boolean?
+  id                  Int                        @id @default(autoincrement())
+  isMandatoryReminder Boolean?                   @default(false)
+  method              EnumWorkflowReminderMethod
+  referenceId         String?                    @unique
+  scheduled           Boolean
+  scheduledDate       DateTime
+  seatReferenceId     String?
+  workflowStep        WorkflowStep?              @relation(fields: [workflowStepId], references: [id])
+  workflowStepId      Int?
+
+  @@index([bookingUid])
+  @@index([workflowStepId])
+  @@index([seatReferenceId])
+  @@index([method, scheduled, scheduledDate])
+  @@index([cancelled, scheduledDate])
+}
+
+model WebhookScheduledTrigger {
+  createdAt     DateTime? @default(now())
+  id            Int       @id @default(autoincrement())
+  jobName       String
+  payload       String
+  retryCount    Int       @default(0)
+  startAfter    DateTime
+  subscriberUrl String
+
+  @@map("WebhookScheduledTriggers")
+}
+
+model BookingSeat {
+  attendee     Attendee @relation(fields: [attendeeId], references: [id])
+  attendeeId   Int      @unique
+  booking      Booking  @relation(fields: [bookingId], references: [id])
+  bookingId    Int
+  data         Json?
+  id           Int      @id @default(autoincrement())
+  referenceUid String   @unique
+
+  @@index([bookingId])
+  @@index([attendeeId])
+}
+
+model VerifiedNumber {
+  id          Int    @id @default(autoincrement())
+  phoneNumber String
+  team        Team?  @relation(fields: [teamId], references: [id])
+  teamId      Int?
+  user        User?  @relation(fields: [userId], references: [id])
+  userId      Int?
+
+  @@index([userId])
+  @@index([teamId])
+}
+
+model Feature {
+  createdAt   DateTime?        @default(now())
+  description String?
+  enabled     Boolean          @default(false)
+  id          String           @id @unique @default(cuid()) @map("slug")
+  lastUsedAt  DateTime?
+  stale       Boolean?         @default(false)
+  type        EnumFeatureType? @default(RELEASE)
+  updatedAt   DateTime?        @default(now()) @updatedAt
+  updatedBy   Int?
+
+  @@index([enabled])
+  @@index([stale])
+}
+
+model SelectedSlot {
+  eventTypeId      Int
+  id               Int      @id @default(autoincrement())
+  isSeat           Boolean  @default(false)
+  releaseAt        DateTime
+  slotUtcEndDate   DateTime
+  slotUtcStartDate DateTime
+  uid              String
+  userId           Int
+
+  @@unique(fields: [userId, slotUtcStartDate, slotUtcEndDate, uid], name: "selectedSlotUnique")
+  @@map("SelectedSlots")
+}
+
+model OAuthClient {
+  accessCodes  AccessCode[]
+  clientSecret String
+  id           String       @id @unique @default(cuid()) @map("clientId")
+  logo         String?
+  name         String
+  redirectUri  String
+}
+
+model AccessCode {
+  client    OAuthClient?           @relation(fields: [clientId], references: [id])
+  clientId  String?
+  code      String
+  expiresAt DateTime
+  id        Int                    @id @default(autoincrement())
+  scopes    EnumAccessCodeScopes[]
+  team      Team?                  @relation(fields: [teamId], references: [id])
+  teamId    Int?
+  user      User?                  @relation(fields: [userId], references: [id])
+  userId    Int?
+}
+
+model CalendarCache {
+  credential   Credential? @relation(fields: [credentialId], references: [id])
+  credentialId Int?
+  expiresAt    DateTime
+  id           Int         @id @default(autoincrement())
+  key          String      @unique
+  value        Json
+}
+
+model TempOrgRedirect {
+  createdAt DateTime                @default(now())
+  enabled   Boolean                 @default(true)
+  fromField String                  @map("from")
+  fromOrgId Int
+  id        Int                     @id @default(autoincrement())
+  toUrl     String
+  type      EnumTempOrgRedirectType
+  updatedAt DateTime                @updatedAt
+
+  @@unique([fromField, type, fromOrgId])
+}
+
+model Avatar {
+  data   String
+  id     String @id @unique @default(cuid()) @map("objectKey")
+  teamId Int    @default(0)
+  userId Int    @default(0)
+
+  @@unique([teamId, userId])
+  @@map(name: "avatars")
+}
+
+model OutOfOfficeEntry {
+  createdAt DateTime @default(now())
+  end       DateTime
+  id        Int      @id @default(autoincrement())
+  start     DateTime
+  toUser    User?    @relation(name: "bookingRedirectsTo", fields: [toUserId], references: [id])
+  toUserId  Int?
+  updatedAt DateTime @updatedAt
+  user      User     @relation(name: "bookingRedirects", fields: [userId], references: [id])
+  userId    Int
+  uuid      String   @unique
+
+  @@index([uuid])
+  @@index([userId])
+  @@index([toUserId])
+  @@index([start, end])
+}
+
+enum EnumEventTypePeriodType {
+  UNLIMITED
+  ROLLING
+  RANGE
+}
+
+enum EnumEventTypeSchedulingType {
+  ROUND_ROBIN
+  COLLECTIVE
+  MANAGED
+}
+
+enum EnumUserIdentityProvider {
+  CAL
+  GOOGLE
+  SAML
+}
+
+enum EnumUserRole {
+  USER
+  ADMIN
+}
+
+enum EnumMembershipRole {
+  MEMBER
+  ADMIN
+  OWNER
+}
+
+enum EnumBookingStatus {
+  CANCELLED
+  ACCEPTED
+  REJECTED
+  PENDING
+  AWAITING_HOST
+}
+
+enum EnumEventTypeCustomInputType {
+  TEXT
+  TEXTLONG
+  NUMBER
+  BOOL
+  RADIO
+  PHONE
+}
+
+enum EnumReminderMailReminderType {
+  PENDING_BOOKING_CONFIRMATION
+}
+
+enum EnumPaymentPaymentOption {
+  ON_BOOKING
+  HOLD
+}
+
+enum EnumWebhookEventTriggers {
+  BOOKING_CREATED
+  BOOKING_PAYMENT_INITIATED
+  BOOKING_PAID
+  BOOKING_RESCHEDULED
+  BOOKING_REQUESTED
+  BOOKING_CANCELLED
+  BOOKING_REJECTED
+  FORM_SUBMITTED
+  MEETING_ENDED
+  MEETING_STARTED
+  RECORDING_READY
+  INSTANT_MEETING
+}
+
+enum EnumAppModelCategories {
+  calendar
+  messaging
+  other
+  payment
+  video
+  web3
+  automation
+  analytics
+  conferencing
+  crm
+}
+
+enum EnumWorkflowStepAction {
+  EMAIL_HOST
+  EMAIL_ATTENDEE
+  SMS_ATTENDEE
+  SMS_NUMBER
+  EMAIL_ADDRESS
+  WHATSAPP_ATTENDEE
+  WHATSAPP_NUMBER
+}
+
+enum EnumWorkflowStepTemplate {
+  REMINDER
+  CUSTOM
+  CANCELLED
+  RESCHEDULED
+  COMPLETED
+}
+
+enum EnumWorkflowTimeUnit {
+  DAY
+  HOUR
+  MINUTE
+}
+
+enum EnumWorkflowTrigger {
+  BEFORE_EVENT
+  EVENT_CANCELLED
+  NEW_EVENT
+  AFTER_EVENT
+  RESCHEDULE_EVENT
+}
+
+enum EnumWorkflowReminderMethod {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum EnumFeatureType {
+  RELEASE
+  EXPERIMENT
+  OPERATIONAL
+  KILL_SWITCH
+  PERMISSION
+}
+
+enum EnumAccessCodeScopes {
+  READ_BOOKING
+  READ_PROFILE
+}
+
+enum EnumTempOrgRedirectType {
+  UserEventType
+  TeamEventType
+  User
+  Team
+}
